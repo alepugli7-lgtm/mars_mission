@@ -15,13 +15,7 @@ from urllib.parse import urlsplit, parse_qs
 
 ROOT = Path(__file__).resolve().parent
 LOCK = threading.RLock()
-ALERT = ("CRITICAL ALERT — MAJOR SYSTEM FAILURE\n\n"
-         "A major failure has damaged the base’s life-support systems.\n\n"
-         "Repairs are still possible, but they require enough crew members to stay.\n\n"
-         "If too many astronauts leave, we can no longer guarantee that those remaining "
-         "will make it home to their families.\n\n"
-         "Return capsules are currently operational.\n"
-         "You must decide: stay with the crew, or secure your return to Earth.")
+ALERT = 'ALERT — MAJOR SYSTEM FAILURE\n\nthere has been a critical issue in the space station.\n\nThe problem can be solved only if enough astronauts stay.\n\nIf too many astronauts leave, those remaining will never see their families again.\n\nReturn capsules are still operational.'
 
 
 class Game:
@@ -88,7 +82,7 @@ class Game:
                       events=[{k:v for k,v in e.items() if k in ('id','time')}
                               for e in self.events if e['kind']=='home'
                               and (not p or e.get('actor') != p['number'])],
-                      me={k:v for k,v in p.items() if k in ('number','action')} if p else None)
+                      me={k:v for k,v in p.items() if k in ('number','action','first_name','last_name')} if p else None)
         if p and not host and p['action']=='home':
             result.update(alert=False,message='',events=[])
         if self.phase=='finished' and p:
@@ -99,7 +93,7 @@ class Game:
             result.update(tester=self.tester,q=self.q,h=self.h,threshold=self.threshold,
                           stop_threshold=self.stop_threshold,joined=sum(not p.get('virtual') for p in self.players.values()),
                           failed=self.failed(),started=self.started,finished=self.finished,history=self.events,
-                          players=[dict(number=p['number'],action=p['action'],virtual=p.get('virtual',False)) for p in self.players.values()])
+                          players=[dict(number=p['number'],first_name=p['first_name'],last_name=p['last_name'],action=p['action'],virtual=p.get('virtual',False)) for p in self.players.values()])
         return result
 
 
@@ -217,8 +211,14 @@ class Handler(BaseHTTPRequestHandler):
                         raise ValueError('Solo tester has one player. Reset before joining again.')
                     if len(GAME.players) >= 200:
                         raise ValueError('Crew full (maximum 200).')
+                    names = []
+                    for field in ('first_name','last_name'):
+                        value = data.get(field)
+                        if not isinstance(value,str) or not value.strip() or len(value)>60 or any(ord(c)<32 for c in value):
+                            raise ValueError('Enter your first and last name (maximum 60 characters each).')
+                        names.append(' '.join(value.split()))
                     token = secrets.token_urlsafe(24)
-                    GAME.players[token] = dict(number=len(GAME.players)+1, action='stay', pending=None)
+                    GAME.players[token] = dict(number=len(GAME.players)+1, first_name=names[0],last_name=names[1],action='stay', pending=None)
                     return self.send(200, {'token':token})
                 if path in ('/api/choose', '/api/prepare'):
                     p = GAME.players.get(self.token())
@@ -263,7 +263,7 @@ class Handler(BaseHTTPRequestHandler):
                             raise ValueError('Classroom mode requires 4 players; solo tester requires 1. Start from the lobby.')
                         if GAME.tester:
                             for number in range(2,41):
-                                GAME.players['virtual-'+str(number)] = dict(number=number,action='stay',pending=None,virtual=True)
+                                GAME.players['virtual-'+str(number)] = dict(number=number,first_name='TEST '+str(number),last_name='Virtual',action='stay',pending=None,virtual=True)
                         GAME.n = len(GAME.players)
                         GAME.threshold = math.ceil(GAME.n*GAME.q/100)
                         GAME.stop_threshold = math.ceil(GAME.n*GAME.h/100)
