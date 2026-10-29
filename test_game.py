@@ -73,7 +73,7 @@ class ClassroomTest(unittest.TestCase):
         self.command('start')
         h=self.call('/api/state',host=True)
         self.assertEqual((h['threshold'],h['stop_threshold']),(12,24))
-        self.assertAlmostEqual(h['deadline']-h['started'],60)
+        self.assertAlmostEqual(h['deadline']-h['started'],120)
         for t in tokens[:11]:self.call('/api/choose',{'action':'home'},token=t)
         self.assertFalse(self.call('/api/state',host=True)['failed'])
         self.command('finish')
