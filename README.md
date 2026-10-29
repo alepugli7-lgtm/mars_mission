@@ -4,8 +4,8 @@
 
 | Your final action | Mission succeeds | Mission fails |
 |---|---|---|
-| Stay on Mars | WIN | LOSE |
-| Return to Earth | LOSE | WIN |
+| Stay on Mars | WIN | LOSE — Death (−100) |
+| Return to Earth | LOSE — Disgrace (−50) | WIN |
 
 The player briefing shows the matrix and exactly:
 “Your decision is final. Your reward depends also on what other players do.”
@@ -16,9 +16,9 @@ Returning is irreversible, but its reward is not guaranteed. The arrival screen 
 updates to WIN or LOSE. No warnings, departure notifications or other game controls
 appear on that screen.
 
-## One minute, two thresholds, three endings
+## Two minutes, two thresholds, three endings
 
-The server fixes the roster and starts a 60-second evacuation window. It ends:
+The server fixes the roster and starts a 120-second evacuation window. It ends:
 1. At the deadline, even if host and player pages are closed.
 2. When mission control presses End mission.
 3. When departures reach 60% of the fixed roster.
@@ -116,5 +116,35 @@ rehearsal remain necessary; no browser executable is available in the creation e
 This is a sequential coordination exercise with irreversible exits and imposed shocks.
 Both coordinated outcomes can give every player WIN: mission failure is a collective
 narrative loss, not a lower individual reward at the all-depart equilibrium. A cascade
-is not guaranteed. No account/name is collected. The tool does not prevent one person
+is not guaranteed. First and last names are required without an account. Only mission control and the player see their names. The tool does not prevent one person
 joining through multiple browser profiles before launch.
+
+
+## Named players and uniform outcomes (latest update)
+
+Both First name and Last name are required (max 60 characters each). Reloading uses the
+same player token. Mission control shows ASTRONAUT + first name; the full name is
+available in the button tooltip to distinguish namesakes. Player-to-player data and
+notifications never include names. The host roster is protected by HOST_KEY.
+All four final results use one card/template, with no hero panel, warning, timer,
+crew bar or communications. Returned players wait on the same card until closure.
+Warning wording and result narratives follow the approved text. The compact in-game
+warning displays only ALERT — MAJOR SYSTEM FAILURE after the modal is dismissed.
+
+## Update an existing GitHub / Render deployment
+
+Only these application files must be replaced:
+- server.py
+- static/index.html
+- static/app.js
+
+The archive has these paths directly at its root (no extra parent directory).
+On GitHub open the repository root, choose Add file / Upload files and drag server.py
+AND the entire static folder together. Confirm the paths and commit once. Do not
+upload index.html or app.js at the root. An alternative is to open each existing file
+and replace its contents; deploy only when all three files are updated.
+Render can keep the existing Docker service, environment variables, domain and QR URLs.
+No new dependency or configuration is needed. Auto-deploy if enabled; otherwise deploy
+latest commit manually. Deployment resets both sessions. Refresh all open browser pages
+after it completes. Test tester QR, named join, warning, forced departures and final
+outcomes before the classroom session. No production deployment was performed here.

@@ -47,6 +47,8 @@ class ClassroomTest(unittest.TestCase):
             h['X-Player-Token'] = token
         if host:
             h['X-Host-Key'] = 'test-host'
+        if path=='/api/join' and data is not None:
+            data=dict(data);data.setdefault('first_name','Marco');data.setdefault('last_name','Rossi')
         if data is not None:
             h['Content-Type'] = 'application/json'
         request = Request(cls.base+path, data=None if data is None else json.dumps(data).encode(),headers=h)
@@ -106,6 +108,8 @@ class ClassroomTest(unittest.TestCase):
     def test_03_tester_isolated_and_forced_departures_real(self):
         self.__class__.active_room='tester'
         t=self.players(1)[0];self.command('start')
+        h=self.call('/api/state',host=True)
+        self.assertAlmostEqual(h['deadline']-h['started'],120)
         s=self.call('/api/state',token=t);self.assertEqual(s['n'],40)
         self.command('force_departure')
         s=self.call('/api/state',token=t)
@@ -124,6 +128,21 @@ class ClassroomTest(unittest.TestCase):
         self.assertEqual((game.phase,game.end_reason),('finished','time_expired'))
         self.assertEqual(game.snapshot('one')['reward'],'win')
         self.assert_http(403,lambda:self.call('/api/qr'))
+
+    def test_05_names_validation_privacy_and_reload(self):
+        self.__class__.active_room='classroom';self.command('reset')
+        self.assert_http(400,lambda:self.call('/api/join',{'first_name':''}))
+        self.assert_http(400,lambda:self.call('/api/join',{'last_name':'a'*61}))
+        self.assert_http(400,lambda:self.call('/api/join',{'first_name':'a\nb'}))
+        t=self.call('/api/join',{'first_name':'  Marco  ','last_name':"D’Angelo"})['token']
+        other=self.call('/api/join',{'first_name':'Giulia','last_name':'Bianchi'})['token']
+        h=self.call('/api/state',host=True)
+        self.assertEqual(h['players'][0]['first_name'],'Marco')
+        self.assertEqual(h['players'][0]['last_name'],"D’Angelo")
+        self.assertEqual(self.call('/api/join',{},token=t)['token'],t)
+        s=self.call('/api/state',token=other)
+        self.assertNotIn('Marco',json.dumps(s));self.assertNotIn('D’Angelo',json.dumps(s,ensure_ascii=False))
+        self.assertEqual(s['me']['first_name'],'Giulia')
 
 
 if __name__=='__main__':unittest.main(verbosity=2)
