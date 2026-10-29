@@ -67,9 +67,13 @@ let noticeEpoch='',seenNotice=0,noticeQueue=[],noticeTimer=null,noticeTimers=new
 function resetNotices(){noticeEpoch='';seenNotice=0;noticeQueue=[];clearTimeout(noticeTimer);noticeTimer=null;noticeTimers.forEach(clearTimeout);noticeTimers.clear();$('departure-stack').replaceChildren();}
 function notifyDepartures(s){if(noticeEpoch!==s.epoch){resetNotices();noticeEpoch=s.epoch;seenNotice=Number(sessionStorage.getItem('ares-notice-'+s.epoch)||0);}for(const e of s.events){if(e.id>seenNotice){noticeQueue.push(e);seenNotice=e.id;}}sessionStorage.setItem('ares-notice-'+s.epoch,String(seenNotice));showNotice();}
 function showNotice(){if(noticeTimer||!noticeQueue.length||$('alert-dialog').open||$('return-dialog').open)return;
- noticeQueue.shift();const box=$('departure-stack'),banner=document.createElement('div');banner.className='departure-banner';const title=document.createElement('strong'),copy=document.createElement('span');title.textContent='AN ASTRONAUT HAS LEFT THE MISSION';copy.textContent='They are returning to Earth.';banner.append(title,copy);box.prepend(banner);while(box.children.length>4)box.lastElementChild.remove();if(navigator.vibrate)navigator.vibrate([100,60,100]);
- const expiry=setTimeout(()=>{banner.remove();noticeTimers.delete(expiry);},4200);noticeTimers.add(expiry);
- noticeTimer=setTimeout(()=>{noticeTimer=null;showNotice();},180);
+ noticeQueue.shift();const box=$('departure-stack'),banner=document.createElement('div');banner.className='departure-banner';const title=document.createElement('strong');title.textContent='AN ASTRONAUT HAS RETURNED HOME';banner.append(title);
+ const later=(fn,ms)=>{const timer=setTimeout(()=>{noticeTimers.delete(timer);fn();},ms);noticeTimers.add(timer);};
+ const dismiss=el=>{el.classList.add('leaving');later(()=>el.remove(),220);};
+ const insert=()=>{box.prepend(banner);later(()=>dismiss(banner),4200);};
+ if(box.children.length>=3){const oldest=box.lastElementChild;dismiss(oldest);later(insert,230);}else insert();
+ if(navigator.vibrate)navigator.vibrate([100,60,100]);
+ noticeTimer=setTimeout(()=>{noticeTimer=null;showNotice();},300);
 }
 
 function updateClock(){if(!state)return;const seconds=state.phase==='running'?Math.max(0,Math.ceil((state.deadline*1000-Date.now()-(state.clockOffset||0))/1000)):state.phase==='finished'?0:60;$('time-left').textContent=String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');$('host-time-left').textContent=$('time-left').textContent;$('clock').classList.toggle('urgent',state.phase==='running'&&seconds<=15);if(!isHost&&seconds===0){$('stay').disabled=true;$('home').disabled=true;}}
@@ -98,30 +102,40 @@ function drawEnding(c,t,kind){
  function text(str,x,y,size=16,color='#cad5df'){c.font=`600 ${size}px system-ui`;c.fillStyle=color;c.textAlign='center';c.fillText(str,x,y);}
  for(let i=0;i<65;i++)circle((i*137+19)%W,(i*73+11)%H,1+(i%3)*.35,'#596c83');
  function planet(x,y,r,earth){circle(x,y,r,earth?'#377fa7':'#ba6448');c.save();c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.clip();if(earth){circle(x-r*.3,y+r*.2,r*.5,'#7bbd99');circle(x+r*.6,y-r*.5,r*.6,'#7bbd99');}else{line(x-r,y+r*.3,x+r,y-r*.2,'#87442f',r*.12);line(x-r,y-r*.3,x+r,y-r*.7,'#d88b64',r*.1);}c.restore();}
- function person(x,y,scale=1,suit=true,arms=0){c.save();c.translate(x,y);c.scale(scale,scale);line(-8,22,-10,43,suit?'#dce6ed':'#637aa5',7);line(8,22,10,43,suit?'#dce6ed':'#637aa5',7);c.fillStyle=suit?'#e5ebed':'#f8a77f';c.fillRect(-13,-1,26,27);line(-13,5,-24,arms? -7:23,suit?'#e5ebed':'#f8a77f',7);line(13,5,24,arms?-7:23,suit?'#e5ebed':'#f8a77f',7);circle(0,-17,17,suit?'#f3eee2':'#e6ae8c');if(suit){circle(1,-18,11,'#284963');line(-4,-23,3,-25,'#8dd3e2',2);c.fillStyle='#f88057';c.fillRect(-7,7,14,7);}else{circle(-5,-20,2,'#392d2a');circle(5,-20,2,'#392d2a');}c.restore();}
+ function person(x,y,scale=1,suit=true,arms=0,helmet=true){c.save();c.translate(x,y);c.scale(scale,scale);line(-8,22,-10,43,suit?'#dce6ed':'#637aa5',7);line(8,22,10,43,suit?'#dce6ed':'#637aa5',7);c.fillStyle=suit?'#e5ebed':'#f8a77f';c.fillRect(-13,-1,26,27);line(-13,5,-24,arms? -7:23,suit?'#e5ebed':'#f8a77f',7);line(13,5,24,arms?-7:23,suit?'#e5ebed':'#f8a77f',7);circle(0,-17,17,suit&&helmet?'#f3eee2':'#e6ae8c');if(suit&&helmet){circle(1,-18,11,'#284963');line(-4,-23,3,-25,'#8dd3e2',2);c.fillStyle='#f88057';c.fillRect(-7,7,14,7);}else{circle(-5,-20,2,'#392d2a');circle(5,-20,2,'#392d2a');}if(suit&&!helmet){c.fillStyle='#f88057';c.fillRect(-7,7,14,7);const lift=ease((t-4.2)/.75);circle(25*lift,-45+65*lift,17,'#f3eee2');circle(25*lift,-45+65*lift,11,'#284963');}c.restore();}
  function ship(x,y,scale=1,angle=0,flame=true){c.save();c.translate(x,y);c.rotate(angle);c.scale(scale,scale);if(flame){c.fillStyle='#ffad57';c.beginPath();c.moveTo(-16,15);c.lineTo(-50-Math.sin(t*40)*9,0);c.lineTo(-16,-15);c.fill();}c.fillStyle='#f88057';c.beginPath();c.moveTo(-20,-7);c.lineTo(-35,-28);c.lineTo(3,-14);c.lineTo(3,14);c.lineTo(-35,28);c.lineTo(-20,7);c.fill();c.fillStyle='#f3eee2';c.beginPath();c.ellipse(0,0,35,16,0,0,Math.PI*2);c.fill();circle(9,0,9,'#438ba6');c.restore();}
  if(kind==='lost'){
   planet(650,400,30,false);const q=ease(t/6);c.save();c.translate(300+120*q,205-50*q+Math.sin(t*1.4)*15);c.rotate(t*.45);person(0,0,2-q,true,1);c.restore();text('?',440,135+Math.sin(t*2)*8,30);text('Anyone…?',360,410,22);return;
  }
- const landing=ease((t-2.7)/.7);
- if(t<3.4){c.save();c.globalAlpha=1-landing;planet(120,290,72,false);text('MARS',120,390,14);planet(595,145,66,true);text('EARTH',595,245,14);
- // A small base explodes; the planet itself remains intact.
- c.fillStyle='#d7dce0';c.fillRect(86,207,58,20);circle(115,208,18,'#d7dce0');c.fillStyle='#4d7e91';c.fillRect(97,204,35,10);
- if(kind==='family'&&t>.65){const p=clamp((t-.65)/1.5);for(let i=0;i<14;i++){const a=i*2.4;c.globalAlpha=(1-p)*(1-landing);circle(115+Math.cos(a)*p*95,209+Math.sin(a)*p*85,8+20*p,i%2?'#ffbd62':'#f86a45');}c.globalAlpha=1-landing;}
- const progress=ease(t/3.2);ship(175+390*progress,260-110*progress,.9,-.28);c.restore();}
+ // Returned players have already flown home. Only heroes replay the journey.
+ if(kind==='family'&&t<1.6){
+  planet(360,340,115,false);text('MARS BASE',360,110,18);c.fillStyle='#d7dce0';c.fillRect(320,207,80,30);circle(360,208,25,'#d7dce0');c.fillStyle='#4d7e91';c.fillRect(337,201,46,16);
+  const p=clamp((t-.2)/1.25);if(t>.2){for(let i=0;i<20;i++){const a=i*2.4;circle(360+Math.cos(a)*p*140,210+Math.sin(a)*p*110,(8+22*p)*(1-p*.5),i%2?'#ffbd62':'#f86a45');}text('CRITICAL BASE FAILURE',360,440,18,'#ff9b85');}return;
+ }
+ if(kind==='family')t=t-1.6+3.4;
+ if(kind==='disgrace')t=t+3.4;
+ const landing=kind==='heroes'?ease((t-2.7)/.7):1;
+ if(kind==='heroes'&&t<3.4){c.save();c.globalAlpha=1-landing;planet(120,290,72,false);text('MARS',120,390,14);planet(595,145,66,true);text('EARTH',595,245,14);const progress=ease(t/3.2);ship(175+390*progress,260-110*progress,.9,-.28);c.restore();}
  if(t>=2.7){c.save();c.globalAlpha=landing;
  c.fillStyle='#29483e';c.beginPath();c.ellipse(360,575,510,250,0,0,Math.PI*2);c.fill();text('EARTH',360,450,14,'#9fd2b3');
+ if(kind==='heroes'){
+  // Cheering spectators form two rows behind the arriving crew.
+  for(let i=0;i<23;i++){const xx=55+i*28,yy=365+(i%2)*28+Math.sin(t*7+i)*4;person(xx,yy,.48,false,1);}
+  for(let i=0;i<3;i++){const xx=465+i*70;person(xx,320,.75,false,0);c.fillStyle='#121923';c.fillRect(xx-19,294,30,17);circle(xx-21,302,8,'#50697d');if(Math.sin(t*13+i*3)>.85){circle(xx-26,300,13,'#fff4bd');}text('PRESS',xx,351,8);}
+  line(430,339,416,316,'#46525e',3);circle(414,312,5,'#c8d4df');
+ }
  ship(230,315,1.5,-Math.PI/2,false);line(210,355,190,380,'#d9e0e5',5);line(250,355,270,380,'#d9e0e5',5);
- const exit=ease((t-3.35)/.9),x=240+95*exit;person(x,340,1.05,true,kind==='heroes'?1:0);
+ const exit=ease((t-3.35)/.9),x=240+95*exit;person(x,340,1.05,true,kind==='heroes'?1:0,kind!=='family'||t<4.2);
  if(kind==='heroes'){
   person(390,342,.9,true,1);person(440,345,.85,true,1);
   if(t>4){for(let j=0;j<4;j++){const p=((t-4+j*.26)%1.25)/1.25,cx=140+j*145,cy=110+(j%2)*65;for(let i=0;i<14;i++){const a=i*Math.PI*2/14;c.globalAlpha=landing*(1-p);line(cx+Math.cos(a)*p*30,cy+Math.sin(a)*p*30,cx+Math.cos(a)*p*85,cy+Math.sin(a)*p*85,['#ffb76d','#9fd2b3','#c2b6ff','#fff2bd'][j],3);}}}
  }else if(kind==='family'){
   const hug=ease((t-3.7)/1.1);person(520-160*hug,342,1,false,1);person(570-203*hug,365,.65,false,1);
+  person(x+105,355,.8,true,0,t<4.2);person(620-166*hug,356,.8,false,1);
   if(hug>.65){text('♥',350,270-Math.sin(t*3)*6,30,'#ff8e87');line(335,345,365,341,'#e5ebed',7);line(361,340,337,338,'#f8a77f',7);}
  }else{
   person(530,340,1,false,1);person(600,343,.9,false,1);
-  if(t>4){for(let i=0;i<5;i++){const raw=(t-4-i*.18)/.75;if(raw<0)continue;const p=clamp(raw),tx=530-(195+i*2)*p,ty=310-95*Math.sin(p*Math.PI);circle(tx,ty,8,'#ed5145');line(tx-3,ty-6,tx+4,ty-10,'#74a765',3);if(p===1){for(let k=0;k<5;k++)circle(tx+Math.cos(k*2)*13,ty+Math.sin(k*2)*13,4,'#ed5145');}}}
+  if(t>4){for(let i=0;i<5;i++){const raw=(t-4-i*.18)/.75;if(raw<0)continue;const p=clamp(raw),tx=530-(195+i*2)*p,ty=323-95*Math.sin(p*Math.PI);circle(tx,ty,8,'#ed5145');line(tx-3,ty-6,tx+4,ty-10,'#74a765',3);if(p===1){for(let k=0;k<5;k++)circle(tx+Math.cos(k*2)*13,ty+Math.sin(k*2)*13,4,'#ed5145');}}}
  }
  c.restore();}
 }
