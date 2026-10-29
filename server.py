@@ -269,7 +269,7 @@ class Handler(BaseHTTPRequestHandler):
                         GAME.stop_threshold = math.ceil(GAME.n*GAME.h/100)
                         GAME.phase = 'running'
                         GAME.started = time.time()
-                        GAME.deadline = GAME.started + 60
+                        GAME.deadline = GAME.started + 120
                         GAME.event('start', home=0, fast=GAME.fast)
                     elif command in ('force_departure','test_notification'):
                         if GAME.phase != 'running':
