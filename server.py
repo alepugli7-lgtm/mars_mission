@@ -15,7 +15,7 @@ from urllib.parse import urlsplit, parse_qs
 
 ROOT = Path(__file__).resolve().parent
 LOCK = threading.RLock()
-ALERT = 'ALERT — MAJOR SYSTEM FAILURE\n\nThere has been a critical issue in the space station.\n\nThe problem can be solved only if enough astronauts stay.\n\nIf too many astronauts leave, those remaining will never see their families again.\n\nReturn capsules are still operational.'
+ALERT = 'ALERT — MAJOR SYSTEM FAILURE\n\nThere has been a critical issue in the space station.\n\nThe mission is now at risk.\n\nReturn capsules are still operational.'
 
 
 class Game:

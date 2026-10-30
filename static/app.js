@@ -1,6 +1,6 @@
 'use strict';
 const $=id=>document.getElementById(id),isHost=location.pathname==='/host',isTester=location.pathname==='/tester';
-const ALERT="ALERT \u2014 MAJOR SYSTEM FAILURE\n\nThere has been a critical issue in the space station.\n\nReturn capsules are still operational.";
+const ALERT="ALERT \u2014 MAJOR SYSTEM FAILURE\n\nThere has been a critical issue in the space station.\n\nThe mission is now at risk.\n\nReturn capsules are still operational.";
 let key=sessionStorage.getItem('ares-host')||'';
 if((isHost||isTester)&&location.hash.length>1){key=decodeURIComponent(location.hash.slice(1));sessionStorage.setItem('ares-host',key);history.replaceState(null,'',location.pathname);}
 let room=isHost?(sessionStorage.getItem('ares-room')||'classroom'):(isTester?'tester':'classroom');
